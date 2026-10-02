@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>오늘 당번</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#eef1ec;--ink:#1f2a24;--sub:#5d6b63;--line:#d3dad3;--card:#f9faf7;--c0:#3b6fb6;--c1:#c58f12;--c2:#b5476b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171d19;--ink:#e8eee9;--sub:#98a79d;--line:#2d3830;--card:#1e2621;--c0:#7aa6e6;--c1:#e5b74a;--c2:#e07fa0}}
+:root[data-theme="dark"]{--bg:#171d19;--ink:#e8eee9;--sub:#98a79d;--line:#2d3830;--card:#1e2621;--c0:#7aa6e6;--c1:#e5b74a;--c2:#e07fa0}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.6}
+main{max-width:480px;margin:0 auto;padding:28px 20px 40px}
+.date{color:var(--sub);font-size:15px;margin:0}
+.who{font-family:"Do Hyeon","Noto Sans KR",sans-serif;font-size:clamp(72px,26vw,120px);line-height:1.1;margin:6px 0 4px;font-weight:400}
+.msg{color:var(--sub);margin:0 0 28px;font-size:15px}
+ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+li{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+li .d{width:84px;color:var(--sub);font-size:14px}
+li .n{font-weight:500}
+li .dot{width:10px;height:10px;border-radius:50%;flex:none}
+li.today{background:var(--card);font-weight:700}
+li.today .d{color:var(--ink)}
+.note{margin-top:20px;color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <p class="date" id="date"></p>
+  <h1 class="who" id="who"></h1>
+  <p class="msg" id="msg"></p>
+  <ul id="list"></ul>
+  <p class="note" id="note"></p>
+</main>
+<script>
+/* ===== 여기만 고치면 돼요 ===== */
+const NAMES = ["이름1", "이름2", "이름3"];   // 당번 순서대로
+const START = "2026-10-06";                  // 이 날의 당번이 NAMES의 첫 번째 사람
+const HOLIDAYS = {                           // 날짜: 이름 (공휴일은 순번에서 빠져요)
+  "2026-10-05":"개천절 대체공휴일","2026-10-09":"한글날","2026-12-25":"성탄절"
+};
+/* 아래 2026년 앞부분 공휴일도 같은 목록이에요 */
+Object.assign(HOLIDAYS,{
+  "2026-01-01":"신정","2026-02-16":"설날 연휴","2026-02-17":"설날","2026-02-18":"설날 연휴",
+  "2026-03-02":"삼일절 대체공휴일","2026-05-05":"어린이날","2026-05-25":"부처님오신날 대체공휴일",
+  "2026-06-03":"지방선거","2026-08-17":"광복절 대체공휴일",
+  "2026-09-24":"추석 연휴","2026-09-25":"추석","2026-09-26":"추석 연휴"
+});
+const COLORS = ["var(--c0)","var(--c1)","var(--c2)"];
+const LAST_YEAR = 2026;                      // 공휴일 목록이 들어 있는 마지막 해
+/* ============================== */
+
+const WD = ["일","월","화","수","목","금","토"];
+const key = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const parse = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const off = d => d.getDay()===0 || d.getDay()===6 || key(d) in HOLIDAYS;
+const addDays = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+const label = d => (d.getMonth()+1)+"월 "+d.getDate()+"일 ("+WD[d.getDay()]+")";
+
+function whoIs(d){
+  const a = parse(START); let n = 0;
+  if (d >= a) { for (let x=a; x<d; x=addDays(x,1)) if(!off(x)) n++; }
+  else { for (let x=d; x<a; x=addDays(x,1)) if(!off(x)) n--; }
+  return ((n % NAMES.length) + NAMES.length) % NAMES.length;
+}
+function nextWorkday(d){ let x=addDays(d,1); while(off(x)) x=addDays(x,1); return x; }
+
+const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+document.getElementById("date").textContent = label(today);
+
+if (!off(today)) {
+  document.getElementById("who").textContent = NAMES[whoIs(today)];
+  document.getElementById("msg").textContent = "오늘 당번이에요.";
+} else {
+  const why = HOLIDAYS[key(today)] || "주말";
+  const nx = nextWorkday(today);
+  document.getElementById("who").textContent = "쉬는 날";
+  document.getElementById("msg").textContent = why + "이라 당번이 없어요. 다음 당번은 " + label(nx) + " " + NAMES[whoIs(nx)] + "님이에요.";
+}
+
+const list = document.getElementById("list");
+let d = off(today) ? nextWorkday(today) : today;
+for (let i=0; i<10; i++) {
+  const w = whoIs(d);
+  const li = document.createElement("li");
+  if (key(d)===key(today)) li.className = "today";
+  li.innerHTML = '<span class="d">'+label(d)+'</span><span class="dot" style="background:'+COLORS[w%COLORS.length]+'"></span><span class="n">'+NAMES[w]+'</span>';
+  list.appendChild(li);
+  d = nextWorkday(d);
+}
+if (d.getFullYear() > LAST_YEAR || today.getFullYear() > LAST_YEAR)
+  document.getElementById("note").textContent = LAST_YEAR+"년까지의 공휴일만 들어 있어서, 이후 날짜는 공휴일이 반영되지 않았을 수 있어요.";
+</script>
+</body>
+</html>
